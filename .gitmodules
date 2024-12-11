@@ -1,0 +1,19 @@
+[submodule "thirdparty/diff-gaussian-rasterization"]
+	path = thirdparty/diff-gaussian-rasterization
+	url = https://github.com/slothfulxtx/diff-gaussian-rasterization.git
+	branch = pose
+[submodule "thirdparty/simple-knn"]
+	path = thirdparty/simple-knn
+	url = https://gitlab.inria.fr/bkerbl/simple-knn.git
+[submodule "thirdparty/mast3r"]
+	path = thirdparty/mast3r
+	url = https://github.com/naver/mast3r.git
+[submodule "thirdparty/pytorch3d"]
+	path = thirdparty/pytorch3d
+	url = https://github.com/facebookresearch/pytorch3d.git
+[submodule "thirdparty/depth_anything_v2"]
+	path = thirdparty/depth_anything_v2
+	url = https://github.com/DepthAnything/Depth-Anything-V2.git
+[submodule "thirdparty/Track-Anything"]
+	path = thirdparty/Track-Anything
+	url = https://github.com/gaomingqi/Track-Anything.git

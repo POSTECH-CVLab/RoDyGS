@@ -1,0 +1,265 @@
+static_data:
+  target: src.data.datamodule.GSDataModule
+  params:
+    dirpath: ./
+    train_dset_config:
+      target: src.data.datamodule.LazyDataReader
+      params:
+        camera_config:
+          target: src.data.utils.FixedCamera
+        pose_reader:
+          target: src.data.asset_readers.MASt3RCameraReader
+          params:
+            mast3r_expname: swin_noloop_000
+            mast3r_img_res: 512
+        depth_reader:
+          target: src.data.asset_readers.DepthAnythingReader
+          params:
+            split: train
+        motion_mask_reader:
+          target: src.data.asset_readers.TAMMaskReader
+          params:
+            split: train
+    train_dloader_config:
+      target: src.data.dataloader.PermutationSingleDataLoader
+      params:
+        num_iterations: 20000
+    test_dset_config:
+      target: src.data.datamodule.DataReader
+      params:
+        camera_config:
+          target: src.data.utils.FixedCamera
+        pose_reader:
+          target: src.data.asset_readers.GTCameraReader
+    test_dloader_config:
+      target: src.data.dataloader.SequentialSingleDataLoader
+      params: {}
+    train_pcd_reader_config:
+      target: src.data.asset_readers.MASt3RPCDReader
+      params:
+        mast3r_expname: swin_noloop_000
+        mode: static
+        num_limit_points: 120000
+    train_pose_reader_config:
+      target: src.data.datamodule.DataReader
+      params:
+        camera_config:
+          target: src.data.utils.FixedCamera
+        pose_reader:
+          target: src.data.asset_readers.GTCameraReader
+    normalize_cams: false
+static_model:
+  target: src.model.rodygs_static.StaticRoDyGS
+  params:
+    sh_degree: 3
+    isotropic: false
+static_calibrated_pose_reader:
+  target: src.data.asset_readers.MASt3R_CKPTCameraReader
+  params:
+    mast3r_expname: swin_noloop_000
+    mast3r_img_res: 512
+dynamic_data:
+  target: src.data.datamodule.GSDataModule
+  params:
+    dirpath: /home/junmyeong/data/kubric_multirig/scene_0/
+    train_dset_config:
+      target: src.data.datamodule.LazyDataReader
+      params:
+        camera_config:
+          target: src.data.utils.FixedCamera
+        pose_reader:
+          target: src.data.asset_readers.MASt3RCameraReader
+          params:
+            mast3r_expname: swin_noloop_000
+            mast3r_img_res: 512
+        depth_reader:
+          target: src.data.asset_readers.DepthAnythingReader
+          params:
+            split: train
+        motion_mask_reader:
+          target: src.data.asset_readers.TAMMaskReader
+          params:
+            split: train
+    train_dloader_config:
+      target: src.data.dataloader.PermutationSingleDataLoader
+      params:
+        num_iterations: 20000
+    test_dset_config:
+      target: src.data.datamodule.DataReader
+      params:
+        camera_config:
+          target: src.data.utils.FixedCamera
+        pose_reader:
+          target: src.data.asset_readers.GTCameraReader
+    test_dloader_config:
+      target: src.data.dataloader.SequentialSingleDataLoader
+      params: {}
+    train_pcd_reader_config:
+      target: src.data.asset_readers.MASt3RPCDReader
+      params:
+        mast3r_expname: swin_noloop_000
+        mode: dynamic
+        num_limit_points: 120000
+    test_transform_fname: test_transforms.json
+    train_pose_reader_config:
+      target: src.data.datamodule.DataReader
+      params:
+        camera_config:
+          target: src.data.utils.FixedCamera
+        pose_reader:
+          target: src.data.asset_readers.GTCameraReader
+    normalize_cams: false
+dynamic_model:
+  target: src.model.rodygs_dynamic.DynRoDyGS
+  params:
+    sh_degree: 3
+    deform_netwidth: 128
+    deform_t_emb_multires: 26
+    deform_t_log_sampling: false
+    num_basis: 16
+    isotropic: false
+    inverse_motion: true
+trainer:
+  target: src.trainer.rodygs.RoDyGSTrainer
+  params:
+    log_freq: 50
+    sh_up_start_iteration: 15000
+    sh_up_period: 1000
+    static:
+      target: src.trainer.rodygs_static.ThreeDGSTrainer
+      params:
+        loss_config:
+          target: src.trainer.losses.MultiLoss
+          params:
+            loss_configs:
+            - name: d_ssim
+              weight: 0.2
+              target: src.trainer.losses.SSIMLoss
+              params:
+                mode: all
+            - name: l1
+              weight: 0.8
+              target: src.trainer.losses.L1Loss
+              params:
+                mode: all
+            - name: global_pearson_depth
+              weight: 0.05
+              target: src.trainer.losses.GlobalPearsonDepthLoss
+              start: 0
+              params:
+                mode: all
+            - name: local_pearson_depth
+              weight: 0.15
+              target: src.trainer.losses.LocalPearsonDepthLoss
+              start: 0
+              params:
+                box_p: 128
+                p_corr: 0.5
+                mode: all
+        num_iterations: 20000
+        position_lr_init: 0.00016
+        position_lr_final: 1.6e-06
+        position_lr_delay_mult: 0.01
+        position_lr_max_steps: 20000
+        feature_lr: 0.0025
+        opacity_lr: 0.05
+        scaling_lr: 0.005
+        rotation_lr: 0.001
+        percent_dense: 0.01
+        densification_interval: 100
+        opacity_reset_interval: 5000000
+        densify_from_iter: 500
+        densify_until_iter: 20000
+        densify_grad_threshold: 0.0002
+        camera_opt_config:
+          target: src.trainer.optim.CameraQuatOptimizer
+          params:
+            camera_rotation_lr: 1.0e-05
+            camera_translation_lr: 1.0e-06
+            camera_lr_warmup: 3000
+            total_steps: 20000
+    dynamic:
+      target: src.trainer.rodygs_dynamic.DynTrainer
+      params:
+        loss_config:
+          target: src.trainer.losses.MultiLoss
+          params:
+            loss_configs:
+            - name: d_ssim
+              weight: 0.2
+              target: src.trainer.losses.SSIMLoss
+              params:
+                mode: all
+            - name: l1
+              weight: 0.8
+              target: src.trainer.losses.L1Loss
+              params:
+                mode: all
+            - name: motion_l1_reg
+              weight: 0.01
+              start: 0
+              target: src.trainer.losses.MotionL1Loss
+            - name: motion_sparsity
+              weight: 0.002
+              start: 0
+              target: src.trainer.losses.MotionSparsityLoss
+            - name: global_pearson_depth
+              weight: 0.05
+              target: src.trainer.losses.GlobalPearsonDepthLoss
+              start: 0
+              params:
+                mode: all
+            - name: local_pearson_depth
+              weight: 0.15
+              target: src.trainer.losses.LocalPearsonDepthLoss
+              start: 0
+              params:
+                box_p: 128
+                p_corr: 0.5
+                mode: all
+            - name: rigidity
+              weight: 0.5
+              freq: 5
+              start: 0
+              target: src.trainer.losses.RigidityLoss
+              params:
+                mode:
+                - distance_preserving
+                - surface
+                K: 8
+            - name: motion_basis_reg
+              weight: 0.5
+              start: 0
+              target: src.trainer.losses.MotionBasisRegularizaiton
+              params:
+                transl_degree: 0
+                rot_degree: 0
+                freq_div_mode: cum_exponential
+        num_iterations: 20000
+        position_lr_init: 0.00016
+        position_lr_final: 1.6e-06
+        position_lr_delay_mult: 0.01
+        position_lr_max_steps: 20000
+        feature_lr: 0.0025
+        opacity_lr: 0.05
+        scaling_lr: 0.001
+        rotation_lr: 0.001
+        percent_dense: 0.01
+        densification_interval: 100
+        opacity_reset_interval: 5000000
+        densify_from_iter: 500
+        densify_until_iter: 15000
+        densify_grad_threshold: 0.0002
+        deform_warmup_steps: 0
+        deform_lr_init: 0.0016
+        deform_lr_final: 0.00016
+        deform_lr_delay_mult: 0.01
+        deform_lr_max_steps: 20000
+        motion_coeff_lr: 0.00016
+        camera_opt_config:
+          target: src.trainer.optim.CameraQuatOptimizer
+          params:
+            camera_rotation_lr: 0.0
+            camera_translation_lr: 0.0
+            camera_lr_warmup: 0
+            total_steps: 20000

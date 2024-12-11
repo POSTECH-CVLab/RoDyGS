@@ -1,0 +1,34 @@
+evaluator:
+  target: src.evaluator.eval.RoDyGSEvaluator
+  params: 
+    camera_lr: 0.00005
+    num_opts: 1000
+
+static_data:
+  target: src.data.datamodule.GSDataModule
+  params:
+    train_dset_config:
+      target: src.data.datamodule.LazyDataReader
+      params:
+        pose_reader:
+          target: src.data.asset_readers.MASt3R_CKPTCameraReader
+          params:
+            mast3r_expname: swin_noloop_000
+            mast3r_img_res: 512
+    train_dloader_config: 
+      target: src.data.dataloader.SequentialSingleDataLoader
+      params: {}
+    test_dset_config:
+      target: src.data.datamodule.LazyDataReader
+      params:
+        pose_reader:
+          target: src.data.asset_readers.Test_MASt3RFovCameraReader
+          params:
+            mast3r_expname: swin_noloop_000
+            mast3r_img_res: 512
+    test_dloader_config:
+      target: src.data.dataloader.SequentialSingleDataLoader
+      params: {}
+    test_transform_fname: test_transforms.json
+
+normalize_cams: false

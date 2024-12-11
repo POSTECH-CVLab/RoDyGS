@@ -1,0 +1,8 @@
+output
+*_temporal*
+__pycache__
+cache/*
+logs/*
+.vscode 
+
+data/* 
